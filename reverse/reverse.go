@@ -1,4 +1,6 @@
-package reverse
+package main
+
+import "fmt"
 
 func Reverse(s string) string {
 	chars := []byte(s)
@@ -7,4 +9,8 @@ func Reverse(s string) string {
 		chars[i], chars[n-1-i] = chars[n-1-i], chars[i]
 	}
 	return string(chars)
+}
+
+func main() {
+	fmt.Println(Reverse("!puteeM gnaloG erolgnaB ot emocleW"))
 }

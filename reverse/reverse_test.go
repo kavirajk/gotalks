@@ -1,4 +1,4 @@
-package reverse
+package main
 
 import (
 	"fmt"
@@ -49,10 +49,8 @@ func BenchmarkReverse(b *testing.B) {
 }
 
 func ExampleReverse() {
-	fmt.Println(Reverse("The quick brown 狐 jumped over the lazy 犬"))
 	fmt.Println(Reverse("Gophers!"))
 
 	// Output:
-	// 犬 yzal eht revo depmuj 狐 nworb kciuq ehT
 	// !srehpoG
 }
