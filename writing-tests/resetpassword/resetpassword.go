@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"code.launchyard.com/root/aircto-backend/config"
-	"code.launchyard.com/root/aircto-backend/models"
-	"code.launchyard.com/root/aircto-backend/utils"
+	"github.com/kavirajk/my-server/config"
+	"github.com/kavirajk/my-server/models"
+	"github.com/kavirajk/my-server/utils"
 )
 
 var (

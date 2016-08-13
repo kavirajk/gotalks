@@ -10,7 +10,7 @@ https://kaviraj.me
 * Agenda
 
 - Basics
-- Understanding unit tests and end-to-end tests
+- Understanding white-box and black-box testing
 - Real-time problems in testing
 - Writing Testable Code
 - Testing tricky parts
@@ -48,15 +48,15 @@ Entire testing framework built on top of _two_ components.
 
 * Simple Problem - Reverse a given string
 
-.play -edit reverse/reverse.go 
+.play -edit writing-tests/reverse/reverse.go 
 
 * Common tests (1/3)
 
-.code -edit reverse/reverse_test.go /^func TestReverse/,/^}/
+.code -edit writing-tests/reverse/reverse_test.go /^func TestReverse/,/^}/
 
 * Common tests (2/3)
 
-.code -edit reverse/reverse_test.go /^func TestReverseUnicode/,/^}/
+.code -edit writing-tests/reverse/reverse_test.go /^func TestReverseUnicode/,/^}/
 
 * Common tests (3/3)
 
@@ -72,7 +72,7 @@ Entire testing framework built on top of _two_ components.
 - Used to measure the performance of a program on a fixed workload.
 - By default no benchmark tests are run. include *-bench=.* to run all the benchmark tests in the package
 
-.code reverse/reverse_test.go /^func Bench/,/^}/
+.code writing-tests/reverse/reverse_test.go /^func Bench/,/^}/
 
 To run:
 
@@ -86,7 +86,7 @@ To run:
 - Test functions that starts with `Example` will be treated specially by `go` `test`
 - They neither have *parameters* nor *results*
 
-.code reverse/reverse_test.go /^func Example/,/^}/
+.code writing-tests/reverse/reverse_test.go /^func Example/,/^}/
 
 Three purposes
 
@@ -148,6 +148,10 @@ To run:
 
 Mocking, mocking, mocking!!
 
+- Should not send actual emails
+- Should not hit actual database
+- etc..
+
 * Writing Testable Code
 
 * Why is it important?
@@ -166,59 +170,59 @@ Writing code that can be easily tested is the idiomatic way.
 
 * Reset User's Password (1/5)
 
-.code resetpassword/resetpassword.go /^func main/,/^}/
+.code writing-tests/resetpassword/resetpassword.go /^func main/,/^}/
 
 * Reset User's Password (2/5)
 
 *Testable* *version*
 
-.code resetpassword/resetpassword_better.go /^func main/,/^}/
+.code writing-tests/resetpassword/resetpassword_better.go /^func main/,/^}/
 
 * Reset User's Password (3/5)
 
-.code resetpassword/resetpassword_better.go /^func ResetPassword/,/^}/
+.code writing-tests/resetpassword/resetpassword_better.go /^func ResetPassword/,/^}/
 
-.code resetpassword/resetpassword_better.go /START2/,/END2/
+.code writing-tests/resetpassword/resetpassword_better.go /START2/,/END2/
 
 
 * Reset User's Password (4/5)
 
-.code resetpassword/resetpassword_better.go /START1/,/END1/
+.code writing-tests/resetpassword/resetpassword_better.go /START1/,/END1/
 
 * Reset User Password (5/5)
 
-.code resetpassword/resetpassword_test.go /^func TestResetPassword/,/^}/
+.code writing-tests/resetpassword/resetpassword_test.go /^func TestResetPassword/,/^}/
 
 * Send Notification Email
 
 * Send notification email
 
-.code email/emails.go /^func SendInvitationEmail/,/^}/
+.code writing-tests/email/emails.go /^func SendInvitationEmail/,/^}/
 
-.code email/emails.go /START1/,/END1/
+.code writing-tests/email/emails.go /START1/,/END1/
 
 
 * Send notification email
 
-.code email/emails.go /START2/,/END2/
+.code writing-tests/email/emails.go /START2/,/END2/
 
 * Send notification email
 
 *Testable* *Version*
 
-.code email/emails_better.go /START/,/END/
+.code writing-tests/email/emails_better.go /START/,/END/
 
 * Send Notification Email
 
-.code email/emails_better.go /START2/,/END2/
+.code writing-tests/email/emails_better.go /START2/,/END2/
 
 * Send Notification Email
 
-.code email/emails_test.go /START1/,/END1/ 
+.code writing-tests/email/emails_test.go /START1/,/END1/ 
 
 * Send Notification Email
 
-.code email/emails_test.go /START2/,/END2/
+.code writing-tests/email/emails_test.go /START2/,/END2/
 
 * Testing Tricky Parts
 
@@ -228,14 +232,14 @@ Testing the functions that `Fatals` or `Exits` for some invalid inputs or behavi
 
 *Example*
 
-.code tricky/tricky.go /^func mustEnv/,/^}/
+.code writing-tests/tricky/tricky.go /^func mustEnv/,/^}/
 
 Now, how do we test, whether *mustEnv(key)* exits if particular *key* is not set in environment variables?
 
 
 * Testing tricky parts (2/2)
 
-.code tricky/tricky_test.go /^func TestMustEnv/,/^}/
+.code writing-tests/tricky/tricky_test.go /^func TestMustEnv/,/^}/
 
 
 * Conclusion

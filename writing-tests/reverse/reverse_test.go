@@ -47,6 +47,11 @@ func BenchmarkReverse(b *testing.B) {
 		Reverse("The quick brown 狐 jumped over the lazy 犬")
 	}
 }
+func BenchmarkReverseMax(b *testing.B) {
+	for i := 0; i <= b.N; i++ {
+		Reverse("Gophers")
+	}
+}
 
 func ExampleReverse() {
 	fmt.Println(Reverse("Gophers!"))
