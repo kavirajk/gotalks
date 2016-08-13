@@ -1,0 +1,251 @@
+Writing tests in Go
+13 August 2016
+
+Kaviraj Kanagaraj
+Aircto ( A Product by Launchyard)
+kaviraj@launchyard.com
+https://kaviraj.me
+@kvrajk
+
+* Agenda
+
+- Basics
+- Understanding unit tests and end-to-end tests
+- Real-time problems in testing
+- Writing Testable Code
+- Testing tricky parts
+- Conclusion
+- Resources
+
+* Basics
+
+* Go lang built-in testing framework
+
+Entire testing framework built on top of _two_ components.
+
+- *go* *test* command
+
+- *testing* package
+
+
+* What go test tool  do?
+
+- Scans the `*_test.go` files for special functions (functions that start with `Test`, `Benchmark` and  `Example`)
+- Generates a temporary main package
+- Builds and runs it
+- Report the results
+- And finally Cleans up.
+
+* Types of test functions
+
+- Common tests
+    func TestCopyBuffer(t *testing.T) {...}
+- Benchmark tests
+  func BenchmarkTrimSpace(b *testing.B) {...}
+- Example tests
+  func ExampleTrimPrefix(){...}
+
+
+* Simple Problem - Reverse a given string
+
+.code -edit reverse/reverse.go /^func Reverse/,/^}/
+.play -edit main.go /^func main/,/^}/
+
+* Common tests(1/2)
+
+.code -edit reverse/reverse_test.go /^func TestReverse/,/^}/
+
+* Normal tests (2/2)
+
+*testing.T*
+
+- t.Error
+- t.Fatal
+- t.Skip
+
+* Benchmark tests
+
+- Used to measure the performance of a program on a fixed workload.
+- By default no benchmark tests are run. include *-bench=.* to run all the benchmark tests in the package
+
+.code reverse/reverse_test.go /^func Bench/,/^}/
+
+To run:
+
+	  $ go test -bench=.
+	  $ go test -bench=. -benchmem
+
+
+
+* Example tests
+
+- Test functions that starts with `Example` will be treated specially by `go` `test`
+- They neither have *parameters* nor *results*
+
+.code reverse/reverse_test.go /^func Example/,/^}/
+
+Three purposes
+
+- Provides good documentation for the APIs
+- Easy to maintain the documentation as code evolves (Example tests are real executable code that get executed on `go` `test`)
+- Used by godoc server
+
+* Coverage
+
+- Testing is never complete
+- `Coverage` increase the confidence that package works well in a wide range of important/critical scenarios
+- `Statement` `Coverage`
+- Use Go's `cover` `tool` to measure coverage report
+
+To run:
+
+   $ go test -cover                 // prints coverage report on stdout
+   $ go test -coverprofile=fmt.out  // creates coverage profile for further analysis
+   $ go tool cover -html=c.out      // To see HTML report of the generated coverage profile
+
+
+*Demo* *on* *fmt* *package*!*
+   
+
+* Profiling (1/2)
+
+Thinking of increasing the performance any specific operation or critical code?
+
+Start with *Profiling*.
+
+Types
+
+- CPU profile
+
+- Heap profile
+
+- Blocking profile
+
+* Profiling (2/2)
+
+Use `go tool pprof` to analyse the profile report
+
+To run:
+
+   $ go test -cpuprofile=cpu.out
+   $ go test -memprofile=mem.out
+   $ go test -blockprofile=block.out
+
+
+*DEMO* *on* *net/http* *package!*
+
+* White-box and Black-box testing
+
+* Examples from standard library
+
+* Real problems in testing Web APIs
+
+Mocking, mocking, mocking!!
+
+* Writing Testable Code
+
+* Why is it important?
+
+You cannot mock everything at the runtime(like Django/python). Though it works for some cases, its not idiomatic way.
+
+Writing code that can be easily tested is the idiomatic way.
+
+*Two* *simple* *Problems*
+
+- Reset User's password
+
+- Send Notification Email
+
+* Reset User's Password
+
+* Reset User's Password (1/5)
+
+.code resetpassword/resetpassword.go /^func main/,/^}/
+
+* Reset User's Password (2/5)
+
+*Testable* *version*
+
+.code resetpassword/resetpassword_better.go /^func main/,/^}/
+
+* Reset User's Password (3/5)
+
+.code resetpassword/resetpassword_better.go /^func ResetPassword/,/^}/
+
+.code resetpassword/resetpassword_better.go /START2/,/END2/
+
+
+* Reset User's Password (4/5)
+
+.code resetpassword/resetpassword_better.go /START1/,/END1/
+
+* Reset User Password (5/5)
+
+.code resetpassword/resetpassword_test.go /^func TestResetPassword/,/^}/
+
+* Send Notification Email
+
+* Send notification email
+
+.code email/emails.go /^func SendInvitationEmail/,/^}/
+
+.code email/emails.go /START1/,/END1/
+
+
+* Send notification email
+
+.code email/emails.go /START2/,/END2/
+
+* Send notification email
+
+*Testable* *Version*
+
+.code email/emails_better.go /START/,/END/
+
+* Send Notification Email
+
+.code email/emails_better.go /START2/,/END2/
+
+* Send Notification Email
+
+.code email/emails_test.go /START1/,/END1/ 
+
+* Send Notification Email
+
+.code email/emails_test.go /START2/,/END2/
+
+* Testing Tricky Parts
+
+* Testing tricky parts (1/2)
+
+Testing the functions that `Fatals` or `Exits` for some invalid inputs or behaviour
+
+*Example*
+
+.code tricky/tricky.go /^func mustEnv/,/^}/
+
+Now, how do we test, whether *mustEnv(key)* exits if particular *key* is not set as environment variables?
+
+
+* Testing tricky parts (2/2)
+
+.code tricky/tricky_test.go /^func TestMustEnv/,/^}/
+
+
+* Conclusion
+
+I'm not a great programmer; I'm just a good programmer with great habit
+- Kent Beck (One of the great programmer)
+
+* Reference
+
+- [[https://www.youtube.com/watch?v=ndmB0bj7eyw][Testing Techniques]] talk by Andrew Gerrand
+- Standard Library
+- [[https://golang.org/pkg/testing/][testing]] package documentation
+- go tool cover
+- go tool pprof
+
+*Books*
+
+- *The* *Go* *programming* *launguage* by Alan A.A Donovan & Brian W. Kernighan (11th Chapter)
+- *Web* *Development* *with* *Go* by Shiju Varghese (Covers basics of testing Web APIs)
