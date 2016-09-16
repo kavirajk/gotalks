@@ -1,0 +1,3 @@
+development:
+   driver: postgres
+   open: user=kaviraj password=kaviraj database=migrate sslmode=disable

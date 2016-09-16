@@ -1,0 +1,196 @@
+Data Persistance Patterns
+17 September 2016
+
+Kaviraj Kanagaraj
+Works at airCTO (A product by Launchyard)
+kaviraj@launchyard.com
+https://kaviraj.me
+@kvrajk
+
+* Agenda
+
+- Some context
+- Motivation
+- Simple models
+- Patterns
+- Lets model a "Photo Album App"
+- Summary
+- Conclusion
+- Reference
+
+
+* Some context
+
+- By "Data Persistance" I mean databases here (not the files)
+- Lets stick to Relational Databases (Not used much of NOSQL like MongoDB)
+- Though all the techniques can be applied to NOSQL databases, except for schema changes (I guess..)
+- We will be using GORM [[https://github.com/jinzhu/gorm/][github.com/jinzhu/gorm]] and Postgres [[https://github.com/lib/pq][github.com/lib/pq]] for this whole talk
+- Though all techniques can be applied to all types of ORM and Relational Databases like (mysql, sqlite, ..)
+
+* Motivation
+
+- Designing good models matters
+- Didn't know much about databases (I'm from Python/Django background :P)
+- Got stuck badly with database real-time problems recently
+- Learned it hard-way. Felt like worth sharing :)
+
+
+* Simple models
+
+
+*Picture* *Model*
+
+.code data-persistance-patterns/models/picture.go /PICMODELSTART/,/PICMODELEND/
+
+*Album* *Model*
+
+.code data-persistance-patterns/models/album.go /ALBUMMODELSTART/,/ALBUMMODELEND/
+
+* Simple Models
+
+*Base* *Model*
+
+.code data-persistance-patterns/models/models.go /MODELSTART/,/MODELEND/
+
+* Database operations
+
+.code data-persistance-patterns/models/picture.go /PICDBSTART/,/PICDBEND/
+
+* Database operations
+
+.code data-persistance-patterns/models/album.go /ALBUMDBSTART/,/ALBUMDBEND/
+
+* Let's test it!
+
+*Create*
+
+.play data-persistance-patterns/examples/create.go /MAINSTART/,/MAINEND/
+
+* Let's test it!
+
+*List*
+
+.play data-persistance-patterns/examples/list.go /MAINSTART/,/MAINEND/
+
+* Let's test it!
+
+*Bad* *Create*
+
+.play data-persistance-patterns/examples/bad-create.go /MAINSTART/,/MAINEND/
+
+* Let's test it!
+
+*Bad* *Get*
+
+.play data-persistance-patterns/examples/bad-list.go /MAINSTART/,/MAINEND/
+
+
+* Questions
+
+- What if you want to move to different ORM all together?
+- What are the DB Operations we can do with Picture model? (or any other models)
+- How do you avoid DB corruption at any cost? (HINT: very important)
+- Do you think, previous models operations are transaction safe? (HINT: No)
+- What if schema changes? How do you migrate old data
+
+
+* Patterns
+
+- Separate DB operations from models (_store_ pattern)
+- Prevent DB corruptions at any cost
+- Soft delete
+- Transactions
+- Handle schema changes
+
+* Separate DB operations from models (store pattern)
+
+If you want to take-away one thing from this whole talk, it would be this.
+
+*Why* *it* *Matters?*
+
+- Have clear idea about _what_ DB operations associated with _what_ models
+- Easy refactoring. Easy add or remove DB operations of any model
+- Can be easily mocked for testing
+- Lousely coupled
+- Higher level APIs don't have to worry about low level implementations (what DB, what ORM..)
+- Want to try new ORM or DB?. Just replace the store, Everything else remains same.
+
+*e.g:* Take a look at the models again
+
+* Avoid DB corruptions at any cost
+
+DB corruption should be avoided at all the stages (create/update/delete)
+
+*Two* *ways* *to* *do* *it*
+
+- Proper schema constraints (prevent DB corruption via creation)
+- Handling update and delete properly along with its relations
+
+*e.g:* Every picture should belong to *valid* album and vice versa
+
+
+* Soft delete
+
+Scenario where an entry still resides in the database. But all the DB operations ignores that entry.
+
+Very real-time
+
+Helpful in keeping track of database history. And useful if user want to recover any entry later.
+
+*e.g* User *deletes* a picture. But we don't want system to remove the picture from database permanently.
+
+* Transactions
+
+Huge chance of DB corruption. if no transactions. 
+
+No transaction. No real time!
+
+*Rule* *of* *Thumb*
+
+"If you think any of the DB operations of a model need changes to its relations as well, use Transaction."
+
+*e.g* Deleting an album *should* delete all pictures of that album as well.
+
+* Handle Schema changes
+
+Any changes in the DB schema should allow easy migration of old data
+
+*Two* *ways* *to* *do* *it*
+
+- Write migrations in plain SQL and manage it via tools like goose, gomigrate, etc..
+- Use ORM to write migrations. (Able to write migrations in Golang. Yay!!!)
+
+* Let's model Photo Album app
+
+Live Code demo
+
+* Summary
+
+- Separate DB operations from models (_store_ pattern)
+- Prevent DB corruptions at any cost
+- Soft delete
+- Transactions
+- Handle schema changes
+
+* Conclusion
+
+- These patterns are _no_ _where_ *complete*. Not even close
+- Learned from real-time problems and open source projects.
+- Really curious to know better patterns. Particularly about migrations!!
+
+* And we are hiring!!!
+
+.image data-persistance-patterns/aircto.png
+.image data-persistance-patterns/gopher.png
+.caption Build powerful backend servers. Work full-time in Go.
+
+* References
+
+- Go database package [[https://golang.org/pkg/database/sql][golang.org/pkg/database/sql]]
+- Understand how Go handles database (*Highly* *Recommended*) [[http://go-database-sql.org/][go-database-sql.org]]
+- Practical persistance in Go [[http://www.alexedwards.net/blog/organising-database-access]]
+- GORM [[http://jinzhu.me/gorm/]]
+
+*Open* *Source* *Projects*
+
+- Mattermost platform. A slack alternative built on Go and ReactJs [[https://github.com/mattermost/platform]]
