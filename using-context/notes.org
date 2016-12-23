@@ -1,0 +1,20 @@
+* Examples
+** Gen(), sq(), merge()
+** Ping pong
+** Mirrored Query
+* Problem with these examples (Goroutin leak)
+* Canceling
+* Basics
+** select statement
+** Channel operation on close
+* Enter context
+* APIs
+* Some Internals
+* Traps. Subtle concepts
+** Comes with cost. Need to check wether is context cancelled in a goroutine
+* Use cases
+* Look into standard library
+** net/http
+** net/Dial
+* Bonus
+** Go 1.8, database is getting Context
