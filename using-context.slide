@@ -1,0 +1,295 @@
+Understanding Go context package
+24 December 2016
+
+Kaviraj Kanagaraj
+Works at airCTO (A product by Launchyard)
+kaviraj@launchyard.com
+https://kaviraj.me
+@kvrajk
+
+* Agenda
+
+- An example
+- Goroutine leak
+- Canceling Goroutine
+- Context package (a little History)
+- Context APIs
+- An example
+- Use cases
+- Context usage inside standard library
+
+
+* An example (1/2)
+
+From [[https://www.youtube.com/watch?v=QDDwwePbDtw&t=1799s][Advanced Concurrency Patterns (2013)]] by Sameer Ajmani
+
+.play using-context/pingpong/main.go /START/,/END/
+
+* An example (2/2)
+
+This code is clean and idiomatic. But there is a problem.
+
+.play using-context/pingpong/main2.go /START/,/END/
+
+* Goroutine leak (1/2)
+
+*No* *Leak*
+.play using-context/leaks/one.go /START/,/END/
+
+*Leak*
+.play using-context/leaks/two.go /START/,/END/
+
+* Goroutine leak (2/2)
+
+- goroutines gotten stuck trying to send/receive forever
+- Unlike garbage variables, *leaked* *goroutines* are *not* *automatically* *collected*
+- Could lead to running out of memory
+- It is important to make sure that goroutines terminate themselves when no longer needed
+
+
+* Canceling Goroutine (1/4)
+
+Sometimes we need to inform a goroutine to stop what it is doing.
+
+for example, in a web server doing some computation on behalf of a client that has disconnected
+
+*But..*
+
+- In Go, There is no way for one goroutine to terminate another *directly*
+
+*Then* *How?*
+
+By using two of the concurrency primitives, we are able to cleanup/terminate goroutines that no longer needed
+
+- _select_ statement
+- A specific _channel_ operation (guess?)
+
+* select statement
+
+Used to _multiplex_ channel send/receive operations
+
+*General* *Form*
+
+	select {
+	case <-ch1:
+	     // ...
+	case x := <-ch2:
+	     // we can use received value
+	case ch3 <- y:
+	     // ...
+	default:
+	     // ...
+	}
+
+- Like a switch statement, it has a number of cases and an optional _default_.
+- Each case specifies a _communication_ (a send or receive operation on some channel) and an associated block of statement
+
+* select statement
+
+- A _select_ waits until a communication for some case is ready to proceed. It then performs that communication and executes the case's associated statements; *the* *other* *communications* *do* *not* *happen*
+
+
+- _select_ with no cases, waits forever
+
+  select{}
+
+* select statement - Countdown Example
+
+From _The_ _Go_ _Programming_ _Launguage_ by K&D
+
+.code using-context/select/counter.go /START/,/END/
+
+* select statemnt - Buffered Channel Example
+
+.play using-context/select/buffered.go /START/,/END/
+
+If multiple cases are ready, _select_ picks one at random
+
+* channels - A simple cheetsheet
+
+  ch := make(chan int) // Create
+  ch <- 7 // Send operation: Blocks till some other goroutine ready to receive
+  a := <-ch // Receive operation: Blocks till some other goroutine ready to send
+  close(ch) // Close
+
+
+- Sending to a closed channel panics
+
+- *Receiving* *from* *a* *closed* *channel* *returns* *zero* *value* *immediately* *(without* *blocking)*
+
+- Closing a closed channel panics
+
+- Sending to a _nil_ channel blocks forever
+
+- Receiving from a _nil_ channel blocks forever
+
+- Closing a _nil_ channel panics
+
+* Canceling Goroutine (2/4)
+
+Closing a channel can be used as a broadcast signal. Which can be used by other goroutines to terminate themselves.
+
+*Lets* *cleanup* *our* *pingpong* *example* *using* *this* *technique!!*
+
+* Canceling Goroutine (3/4)
+
+.code using-context/pingpong/cleanedup.go /START/,/END/
+.code using-context/pingpong/cleanedup.go /PLAYERSTART/,/PLAYEREND/
+
+* Cancelling Goroutine (4/4)
+
+.play using-context/pingpong/cleanedup.go /MAINSTART/,/MAINEND/
+
+* Context package (a little history)
+
+- Many Go APIs support cancelation and deadlines already.
+- Different cancelation APIs in each package are a headache.
+- Needed one that's independent of package or transport:
+
+
+*Goal*: Provide a uniform cancelation API that works across package boundaries.
+
+*2014*: golang.org/x/net/context - Sameer Ajmany
+*2016*: brought into standard library as "context" package in Go1.7 - Brad Fitzpatrik
+
+* Context API
+
+*Types*
+
+  type CancelFunc
+  
+  type Context interface {
+        Deadline() (deadline time.Time, ok bool)
+        Done() <-chan struct{}
+  
+        Err() error
+
+        Value(key interface{}) interface{}
+  }
+
+*APIs*
+
+  func Background() Context
+  func TODO() Context
+  func WithCancel(parent Context) (ctx Context, cancel CancelFunc)
+  func WithDeadline(parent Context, deadline time.Time) (Context, CancelFunc)
+  func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc)
+  func WithValue(parent Context, key, val interface{}) Context
+
+* Context API - Cancelation
+
+*Two* *ways*
+
+- context.WithCancel() - _cancels_ context explicitly by calling cancel()
+- context.WithDeadline()/context.WithTimeout() - cancels  context implicitly when _deadline_ is reached
+
+
+  func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc) {
+      return WithDeadline(parent, time.Now().Add(timeout))
+  }
+
+
+* Context API - context.TODO()
+
+- Use context.TODO when it's unclear which Context to use or it is not yet available.
+- Never use _nil_ context. Use context.TODO instead
+
+  func SomeFunc(ctx context.Context, a Arg) {
+      ... // do something with context
+      f(a)
+  }
+
+  func SomeOtherFunc(a Arg) {
+       SomeFunc(context.TODO(), a)
+  }
+
+* Context API - context.Value()
+
+  func addUserID(rw http.ResponseWriter, req *http.Request, next http.Handler) {
+      ctx := context.WithValue(req.Context(), "userid", req.Header.Get("userid"))
+      req = req.WithContext(ctx)
+      next.ServeHTTP(rw, req)
+  }
+
+  func useUserID(rw http.ResponseWriter, req *http.Request, next http.Handler) {
+     uid := req.Context().Value("userid")
+     rw.Write([]byte(uid))
+  }
+
+*NOTE*:
+
+- Use context Values only for request-scoped data
+- Do not use for passing optional parameters to functions.
+- Make refactoring hard
+- In short, Try not to use context.Value() (atleast, not more often)
+
+[[https://peter.bourgon.org/blog/2016/07/11/context.html][https://peter.bourgon.org/blog/2016/07/11/context.html]]
+
+* An Example - Lets context PingPong
+
+.play using-context/pingpong/context.go /MAINSTART/,/MAINEND/
+.code using-context/pingpong/context.go /PLAYERSTART/,/PLAYERTMPEND/
+
+* Usecases
+
+- In Go servers, when the request completes or times out, its work should be canceled.
+
+- If need to access request-specific values (like user credentials)
+
+- Database Query on multiple replica
+
+- Network file system clients
+
+- Cloud service clients
+
+- *and* *more...*
+
+* Context usage inside standard library
+
+*os/exec*
+
+- *exec.CommandContext()* - Kill the process (by calling os.Process.Kill) if the context becomes done before the command completes on its own.
+
+*net*
+
+- *net.DialContext()* -  If the context expires before the connection is complete, an error is returned
+
+*net/http*
+
+- *request.WithContext()* - Returns a shallow copy of r with its context changed to ctx.
+
+* Context usage inside standard library
+
+.play using-context/std/http.go /MAINSTART/,/MAINEND/
+
+* Context usage inside standard library (BONUS)
+
+*database/sql* getting context in [[https://tip.golang.org/doc/go1.8#more_context][go 1.8]] (Feb, 2017)
+
+- ExecContext(),
+- PrepareContext(),
+- QueryContext(),
+- QueryRowContext(),
+- PingContext(),
+- StmtContext()
+
+* Summary
+
+- Goroutine leaks. Why does it matter?
+- Cancelling goroutine using _select_ and channel _close_ operation
+- Context package
+- How to use them
+
+* Reference
+
+- [[https://blog.golang.org/pipelines][https://blog.golang.org/pipelines]]
+
+- [[https://blog.golang.org/context][https://blog.golang.org/context]]
+
+- [[https://golang.org/pkg/context][https://golang.org/pkg/context/]]
+
+- [[http://golang.rakyll.org/leakingctx/][http://golang.rakyll.org/leakingctx/]]
+
+- The Go Programming Language K&D book
+
+- [[https://www.youtube.com/watch?v=f6kdp27TYZs][Go Concurrency Patterns by Rob Pike]]
