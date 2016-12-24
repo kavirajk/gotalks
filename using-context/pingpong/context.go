@@ -33,8 +33,7 @@ func Player(ctx context.Context, name string, table chan *Ball) {
 		case <-ctx.Done(): // HL
 			return // HL
 			// PLAYERTMPEND OMIT
-		default:
-			ball := <-table
+		case ball := <-table:
 			ball.hits++
 			fmt.Printf("%s: %d\n", name, ball.hits)
 			time.Sleep(200 * time.Millisecond)
