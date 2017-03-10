@@ -1,0 +1,325 @@
+Web services Design in Go
+11 March 2017
+
+Kaviraj Kanagaraj
+Works at airCTO (A product by Launchyard)
+kaviraj@launchyard.com
+@kvrajk
+
+* Agenda
+
+- Motivation
+- Web services design - What can possibly go wrong?
+- Layers of web services
+- Example - A Bookshop
+- Demo
+- Summary
+- Further Readings
+
+* Motivation
+
+- Who's read this book?
+
+.image web-services/building-microservices.jpg 400 _
+
+- NOTE: This talk is *not* about microservices
+
+* Motivation (key take aways from the book)
+
+- Small and focused on doing one thing well (*Single* *Responsibility* *Principle*)
+  
+- Loose Coupling
+
+- High Cohesion
+
+- "Gather together those things that change for the same reason,	and separate those things that change for different reasons.” - Robert C Martin
+
+- *Prematurely* *decomposing* *a* *system* *into* *microservices* *can* *be* *costly,* *especially* *if* *you* *are* *new* *to* *the* *domain.*
+
+- *In* *many* *ways,* *having* *an* *existing* *codebase* *you* *want* *to* *decompose* *into* *microservices* *is* *much* *easier* *than* *trying* *to* *go* *to* *microservices* *from* *the* *beginning.*
+
+
+* Motivation
+
+.image web-services/peter-mono.png _ 1000
+
+
+".. to be honest, I *wouldn't* *start* *with* *microservice* model at all: I'd write an *elegant* *monolith*, deployed as a single process,and only split things out when that process started to break down in tangible ways" - *Peter* *Bourgon* *(Author* *of* *Go-kit)*
+
+*Question*
+
+How does elegant monolithic looks like?
+
+Right!. Thats the purpose of this talk.
+
+* What this talk is about?
+
+- Desigining and implementing *composible* web services.
+- Writing services that are flexible, maintainable and *testable*
+- Design your domain logic independent of transport(http, grpc, thrift etc)
+
+*Not* *about*
+
+- What vendoring tool to use?
+- How should I deploy my services?
+
+* Designing Web services - What can possibly go wrong?
+
+Let's build a web service to order food :)
+
+Let's start simple
+
+* Order Food Service (1/2)
+
+.code web-services/simple-service.go /START1/,/END1/
+
+* Order Food Service (2/2)
+
+.code web-services/simple-service.go /START2/,/END2/
+
+Ship it!! 
+
+* Let's log our code
+
+* Order Food Service with logs (1/3)
+
+.code web-services/logging-service.go /START1/,/END1/
+
+* Order Food Service with logs (2/3)
+
+.code web-services/logging-service.go /START2/,/END2/
+
+* Order Food Service with logs (3/3)
+
+.code web-services/logging-service.go /START3/,/END3/
+
+Ship again!
+
+* Let's instrument our code
+
+* Order Food Service with instrumentation (1/5)
+
+We will prometheus to instrument our code
+
+*Metrics*
+
+- Counter - requests count, errors count, etc.,
+- Gauge - number of running goroutines, memory usage, etc.,
+- Histogram, Summary - request durations, response sizes, etc.,
+
+*NOTE*: Prometheus itself is written in Go
+
+* Order Food Service with instrumentation (2/5)
+
+.code web-services/instrumenting-service.go /START1/,/END1/
+
+* Order Food Service with instrumentation (3/5)
+
+.code web-services/instrumenting-service.go /START2/,/END2/
+
+* Order Food Service with instrumentation (4/5)
+
+.code web-services/instrumenting-service.go /START3/,/END3/
+
+* Order Food Service with instrumentation (5/5)
+
+.code web-services/instrumenting-service.go /START4/,/END4/
+
+And ship again!
+
+* Questions
+- How do we change to different logger?
+- How many places do we have to change the code in order to achieve that?
+- How do we mock db access (probably for testing your services)
+- How do we rate-limit your services? (Probably Big Billion Day)
+- I want to move to grpc transport. But how?
+- I want only admin to access particular services. How?
+- *How* *do* *we* *test* *only* *my* *business* *logic?* (HINT: Almost impossible)
+
+* What went wrong
+
+- Our service was not designed to adopt changes
+- Our business logic is tightly coupled with transport, logging, etc..
+- Our handler is doing _too_ _many_ things
+ 
+* Layers of Web services
+
+.image web-services/layers.png 400 _
+
+* Note on Configuration
+
+Prefer _flags_ to inject configuration over _ENV_ variables
+
+Why?
+
+.image web-services/flag-config.png
+
+* Note on Configuration
+
+Its good to take default value from env
+
+   listenAddr  = flag.String("http-address", envString("HTTP_ADDRESSS", "0.0.0.0:8080"), "listen addr.")
+
+may need to write helpers.
+
+  func envString(key, default string) string {
+     if env, ok := os.LooupEnv(key); ok {
+     	     return env
+     }
+     return default
+  }
+
+
+* Note on packages
+
+- Cannot ignore. Unlike languages like python
+- No file scope(except for import path)
+
+*Good* *packages*
+io, net/http, encoding/json, users, shipping, catalog
+
+*Bad* *packages*
+util, common, server (what protocol?), api, models, views
+
+*Package* *should* *always* *be* *designed* *based* *on* *what* *it* *provides* *not* *what* *it* *contains*
+
+* Note on packages (Good Patterns)
+
+All you are writing is tool/cmd
+
+.image web-services/packages-only-cmd.png
+
+* Note on packages (Good Patterns)
+
+Projects with reusable-packages and binaries
+
+.image web-services/packages-with-cmd.png
+    
+* Note on packages (Anti Patterns)
+.image web-services/packages-antipattern.png
+
+Why its bad?
+- package _api_ already doing too many things.
+- It has so many reasons to change. (no Single Responsibility Principle)
+- Its very hard to maintain _api_ package. why? (HINT: no file scope for variable names)
+
+[[https://www.goinggo.net/2017/02/package-oriented-design.html][https://www.goinggo.net/2017/02/package-oriented-design.html]]
+
+* Example - A Bookshop
+
+*Idea*
+
+- To Model "real world" digital bookshop(users, catalog, order, payment.. etc).
+- To learn how to write elegant web services in Go
+
+*Status*
+
+- Started around 3 weeks ago. Not quite complete.
+- Took lot of inspiration from Go-kit examples and Domain Driven Design
+
+[[https://github.com/kavirajk/bookshop][https://github.com/kavirajk/bookshop]]
+
+Any suggestions are welcome :)
+
+* Package design
+
+- *users* - user service. register, login, authenticate, etc..
+- *catalog* - list items, search,
+- *order* - place order, cancel order
+- *payment* - make payment
+- *db* - all the db related operations
+- *cmd* - binaries. main server, worker etc..
+
+* Configuration
+	var (
+		dbDriver = flag.String(
+			"db-driver", envString("DB_DRIVER", "postgres"),
+			"Name of the database driver. e.g: postgres",
+		)
+		dbSource = flag.String(
+			"db-source", envString("DB_SOURCE", ""),
+			"Database source to connect to.e.g: user=<user> password=<password> dbname=<dbname>",
+		)
+		listenAddr = flag.String(
+			"http-addr", envString("HTTP_ADDR", "0.0.0.0:8080"),
+			"http address to listen to e.g: 0.0.0.0:8080",
+		)
+	)
+	flag.Parse()
+
+* Abstractions
+
+- Service
+- Service Middleware
+- Endpoint
+- Transport
+
+* Service design (Core business logic)
+.code web-services/bookshop/catalog.go /DEFINE/,/DEFINEEND/
+
+* Service Implementation
+.code web-services/bookshop/catalog.go /IMPL/,/IMPLEND/
+
+* Question:
+- Does our services know anything about logger or databases?
+- Does our services know about rate-limiting?
+- Does our services know anything about what transport are we using?(http, grpc, etc)
+
+NO. of course not.
+
+*Its* *just* *takes* *some* *Go* *datastructure* *and* *return* *some* *Go* *datastructure.* *Thats* *it!*
+
+* Service Middleware
+
+.code web-services/bookshop/catalog.go /MID/,/MIDEND/
+
+- very powerful idea
+- follows decorator pattern
+
+* Logging service
+
+.code web-services/bookshop/catalog.go /LOG/,/LOGEND/
+
+- Guess what? go-kit/log may become part of standard library.(discussion link)
+
+* Endpoint design
+
+  // Endpoint is the fundamental building block of servers and clients.
+  // It represents a single RPC method.
+  type Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)
+
+- Every service need to converted to an endpoint to make it available to external world.
+.code web-services/bookshop/catalog.go /ENDP1/,/ENDP1END/
+
+* Endpoint design
+.code web-services/bookshop/catalog.go /ENDP2/,/ENDP2END/
+
+* Transport design
+.code web-services/bookshop/catalog.go /TRANS/,/TRANSEND/
+
+* Putting it all together
+.code web-services/bookshop/catalog.go /MAIN/,/MAINEND/
+
+* Demo
+
+
+* Summary
+
+- Keep your business logic separate and unpolluted
+- Write composible services (Middleware pattern)
+- "Loggers should be injected into dependencies. Full stop" - [[https://groups.google.com/forum/#!msg/golang-dev/F3l9Iz1JX4g/2TpGYsTkAQAJ][Edward Muller]]
+- Same applies for databases
+- Prefer _flags_ for configuration. ENV is _ok_
+- Design packages based on what it provides. not based on what it contains.
+- Use structured logging
+- Understand different layers of web services. Put the code in the appropriate layer.
+- Always start with _elegant_ monolithic
+
+* Further Readings
+
+- [[https://www.goodreads.com/book/show/22512931-building-microservices][Building Microservices]] by Sam Newman (Book)
+- [[https://dave.cheney.net/2016/08/20/solid-go-design][SOLID Go Design]] by Dave Cheney
+- [[https://www.infoq.com/presentations/go-patterns][Successfull Go program Design]] by Peter Bourgon (Highly recommended)
+- [[https://www.goinggo.net/2017/02/package-oriented-design.html][Package Oriented Design]] by William Kennedy
+- [[go-kit.io][go-kit.io]]
+- [[https://gophers.slack.com/messages/go-kit][#go-kit]] on slack
