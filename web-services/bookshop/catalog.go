@@ -34,7 +34,7 @@ type basicService struct {
 }
 
 // NewCatalogService return basic Service implementation.
-func NewService(r Repo) Service {
+func NewService(r Repo) Service { // HL
 	return basicService{r}
 }
 

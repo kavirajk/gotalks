@@ -99,7 +99,7 @@ Ship again!
 
 * Order Food Service with instrumentation (1/5)
 
-We will prometheus to instrument our code
+We will use prometheus to instrument our code
 
 *Metrics*
 
@@ -139,8 +139,8 @@ And ship again!
 * What went wrong
 
 - Our service was not designed to adopt changes
-- Our business logic is tightly coupled with transport, logging, etc..
-- Our handler is doing _too_ _many_ things
+- Our business logic is tightly coupled with transport, logging, transport etc..
+- In short, Our handler is doing _too_ _many_ things
  
 * Layers of Web services
 
@@ -267,7 +267,7 @@ Any suggestions are welcome :)
 
 NO. of course not.
 
-*Its* *just* *takes* *some* *Go* *datastructure* *and* *return* *some* *Go* *datastructure.* *Thats* *it!*
+*Our* *services* *just* *takes* *some* *Go* *datastructure* *and* *return* *some* *Go* *datastructure.* *Thats* *it!*
 
 * Service Middleware
 
