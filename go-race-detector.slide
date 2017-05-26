@@ -1,0 +1,252 @@
+Go race detector
+27 May 2017
+
+Kaviraj Kanagaraj
+Aircto
+kaviraj@launchyard.com
+https://kaviraj.me
+@kavirajk
+
+* Agenda
+
+- What is data race
+- How is it different from race condition
+- Why do you care?
+- Go race detector in action
+- How does it work?
+- Pros and Cons (a.k.a What's the tradeoff?)
+- Summary
+- Conclusion
+
+* What is data race?
+
+A classic example. Bank
+
+.code go-race-detector/bank/bank.go
+
+* What is data race?
+
+.code go-race-detector/bank-racy.go /START/,/END/
+
+A data race occurs when two or more threads *concurrently* access a shared memory location and *at* *least* one of them is *write*.
+
+* How is it different from race condition?
+
+A *race* *condition* is a flaw that occurs when the *timing* or *ordering* *of* *events* affects a *program’s* *correctness*
+
+Most of the race conditions occur because of data race. They are *related*. But *not* *the* *same*
+
+*Example:*
+
+*Race* *condition:*
+
+.code go-race-detector/not-data-race.go /START1/,/END1/
+.code go-race-detector/not-data-race.go /START2/,/END2/
+
+this is *not* *a* *data* *race*
+
+* Why do you care?
+
+- Everything is multi-core now, from i5 on your laptop to snapdragon on your mobile
+
+- To take full advantages of the processing resources
+
+- Since number of concurrent softwares written has gone high, so is the *concurrent* *bugs* (data races, race condition, deadlocks).
+
+- Easy to introduce *concurrent* *bugs* in languages like Go. (there is a tradeoff. [[https://www.quora.com/Where-does-Gos-concurrency-CSP-fall-short][https://www.quora.com/Where-does-Gos-concurrency-CSP-fall-short]]
+
+- Compiler assumes _race_ _free_ code
+
+- Go builtins like _map_ and _slice_ are *not* thread safe
+
+Now how do we protect our systems from these *data* *race* *bugs* in a manner that is *scalable* and *reliable?*
+
+* Go race detector
+
+- Go v1.1 (2013)
+- Availabe at Go tool chain(*$* *go* *run* *-race* *main.go*)
+- Dynamic race detector
+- Based on C/C++ ThreadSanitizer library
+- 1200+ races in Google codebase
+- ~100 in the Go stdlib
+- 100+ in Chromium, LLVM, GCC, OpenSSL, WebRTC, FireFox
+
+* Go race detector in action
+
+Built into the tool-chain
+
+  $ go test -race mypkg    // to test the package
+  $ go run -race mysrc.go  // to run the source file
+  $ go build -race mycmd   // to build the command
+  $ go install -race mypkg // to install the package
+
+The *GORACE* environment variable sets race detector options
+
+    GORACE="option1=val1 option2=val2"
+
+* Go race detector in action
+
+Options:
+
+- *log_path* (default stderr) - Writes its report to a file named log_path.pid. 
+- *exitcode* (default 66) - The exit status to use when exiting.
+- *strip_path_prefix* (default "") - Strip this prefix from all reported file paths.
+- *history_size* (default 1) - Increasing this value can avoid a "failed to restore the stack" error in reports.
+- *halt_on_error* (default 0) - Controls whether the program exits after reporting first data race.
+
+E.g:
+
+    GORACE="log_path=/tmp/race/report strip_path_prefix=/my/go/sources/" go test -race
+
+Lets see some demo!
+
+* How does it work?
+
+* Confession
+
+- The upcoming content is based on following amazing talk
+
+- *go* *-race* *under* *the* *hood* by Kavya at StrangeLoop
+
+.iframe https://www.youtube.com/embed/5erqWdlhQLA 400 980
+
+* Example
+
+We will use the following example for rest of the talk.
+
+.code go-race-detector/internal/racy.go /START/,/END/
+
+Can the value of count be 2? (HINT: Yes)
+
+* Example
+
+.code go-race-detector/internal/seq.go /START/,/END/
+
+.code go-race-detector/internal/mutex.go /START/,/END/
+
+Can the value of count be 2? (HINT: No) Why?
+
+* Go Memory Model (1/3)
+
+[[https://golang.org/ref/mem][https://golang.org/ref/mem]]
+
+- "Programs that modify data being simultaneously accessed by multiple goroutines must serialize such access."
+
+- "To serialize access, protect the data with channel operations or other synchronization primitives such as those in the sync and sync/atomic packages."
+
+- "Within a single goroutine, there is no concurrency"
+
+* Go Memory Model (2/3)
+
+- Within a single goroutine, Reads + Writes are ordered
+- With multiple goroutines, Reads and Writes must be synchronized. Else data race.
+
+*Question:*
+So, now how do we find concurrent memory access?
+
+* Happens-before
+
+- Go memory model users _happens-before_ idea to order events across goroutines
+
+- Order Memory Acess events (i.e reads, writes)
+- Order Synchronization events(i.e, lock, unlock, chan send, chan receive)
+
+* Happens-before
+
+Event X happens-before Event Y, Only IF they are
+- in same goroutine
+- a synchronization pair
+- X < E < Y (via transitivity)
+
+If none of them holds, X and Y are concurrent!!
+
+* Happens-before (counter with locks)
+
+.image go-race-detector/images/happens-before-locks.png 500 700
+
+* Happens-before (racy counter)
+
+.image go-race-detector/images/happens-before-racy.png 500 700
+
+* Happens-before
+
+.image go-race-detector/images/happens-before-graph.png 500 700
+
+How do we implement happens-before?
+
+* Vector clocks (counter with locks)
+
+vector clocks establish happens-before edge between any two events
+
+.image go-race-detector/images/vector-clocks-locks.png 500 700
+
+* Vector clocks (counter with locks)
+
+.image go-race-detector/images/vector-clocks-2.png 500 700
+
+* Vector clocks (more complex example)
+
+.image go-race-detector/images/vector-clocks-3.png 500 700
+
+
+* How is it implemented?
+
+To implement _happens-before_ detection, need to
+- create vector clocks for goroutines
+- update vector clocks based on memory acess and synchronization events
+- compare vector clocks to detect happens-before relations during every memory access
+
+* How is it implemented?
+
+How race detector is able to receive these events?
+
+- Goroutine creation - runtime/proc1.go
+- Memory access - Compiler Instrumentation. Added in IR (Intermediate Representation)
+- Synchromization events - runtime/mutex.go
+
+* How is it implemented?
+
+- ThreadSanitizer implements _happens-before_ race detection
+
+- creates, updates vector clocks for every goroutines
+- computes happens-before edges at memory access
+- computes happens-before edges at synchronization events
+
+Boils down to, Tsan have to do two things for every memory access
+
+- Check data race with previous access
+- Store information about this access for future detections
+
+* Whats the tradeoff
+
+- No false positives (only report real races)
+
+- Can miss races
+
+- Program slowdown(5x - 15x)
+
+- Increases memory Usage(5x - 10x)
+
+* Summary
+
+- What is _data_ _race_ and why does it matter.
+- Using Go race detector
+- How does it work?
+- _Happens_ _before_ relation
+- How vector clocks are used to implement _happens_ _before_
+- How Go compiler and runtime adds extra instructions to detect data race
+- Whats the tradeoff.
+
+So how does go race detector works?
+
+- Go race detector find data races by determining if the *access* *to* *a* *memory* *location* can be *ordered* by *happens-before*, using *vector-clocks*.
+
+* References
+
+- [[https://golang.org/ref/mem][https://golang.org/ref/mem]]
+
+- [[https://blog.golang.org/race-detector][https://blog.golang.org/race-detector]]
+
+- [[https://golang.org/doc/articles/race_detector.html][https://golang.org/doc/articles/race_detector.html]]
+
+- [[https://www.youtube.com/watch?v=5erqWdlhQLA][https://www.youtube.com/watch?v=5erqWdlhQLA]]
