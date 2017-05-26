@@ -8,14 +8,12 @@ func ParallelWrite(data []byte) chan error {
 		res <- err
 	} else {
 		go func() {
-			// This err is shared with the main goroutine,
-			// so the write races with the write below.
 			_, err = f1.Write(data)
 			res <- err
 			f1.Close()
 		}()
 	}
-	f2, err := os.Create("file2") // The second conflicting write to err.
+	f2, err := os.Create("file2")
 	if err != nil {
 		res <- err
 	} else {
@@ -29,5 +27,8 @@ func ParallelWrite(data []byte) chan error {
 }
 
 func main() {
-	ParralledWrite([]byte("Golang Meetup!!"))
+	ch := ParallelWrite([]byte("Golang Meetup!!"))
+	<-ch
+	<-ch
+
 }

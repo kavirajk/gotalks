@@ -11,9 +11,9 @@ func main() {
 	go func() {
 		bank.Deposit(100) // HL
 		fmt.Println(bank.Balance())
-	}()
+	}() // g1
 
-	go bank.Deposit(300) // HL
+	go bank.Deposit(300) //g2 // HL
 }
 
 // END OMIT

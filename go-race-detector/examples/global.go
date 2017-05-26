@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 )
 
 var (
-	mu      sync.Mutex
 	service map[string]net.Addr
 )
 

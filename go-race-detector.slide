@@ -1,4 +1,4 @@
-Go race detector
+Understanding Go race detector
 27 May 2017
 
 Kaviraj Kanagaraj
@@ -11,12 +11,11 @@ https://kaviraj.me
 
 - What is data race
 - How is it different from race condition
-- Why do you care?
+- Why do you care
 - Go race detector in action
-- How does it work?
-- Pros and Cons (a.k.a What's the tradeoff?)
+- How does it work
+- Pros and Cons (a.k.a Tradeoff)
 - Summary
-- Conclusion
 
 * What is data race?
 
@@ -28,6 +27,9 @@ A classic example. Bank
 
 .code go-race-detector/bank-racy.go /START/,/END/
 
+*Question*: What are the possible values "balance" can end up with?
+
+*Definition:*
 A data race occurs when two or more threads *concurrently* access a shared memory location and *at* *least* one of them is *write*.
 
 * How is it different from race condition?
@@ -48,8 +50,6 @@ this is *not* *a* *data* *race*
 * Why do you care?
 
 - Everything is multi-core now, from i5 on your laptop to snapdragon on your mobile
-
-- To take full advantages of the processing resources
 
 - Since number of concurrent softwares written has gone high, so is the *concurrent* *bugs* (data races, race condition, deadlocks).
 
