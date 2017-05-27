@@ -146,7 +146,7 @@ So, now how do we find concurrent memory access?
 
 * Happens-before
 
-- Go memory model users _happens-before_ idea to order events across goroutines
+- Go memory model users _happens-before_ relation to order events across goroutines
 
 - Order Memory Acess events (i.e reads, writes)
 - Order Synchronization events(i.e, lock, unlock, chan send, chan receive)
@@ -217,7 +217,7 @@ Boils down to, Tsan have to do two things for every memory access
 - Check data race with previous access
 - Store information about this access for future detections
 
-* Whats the tradeoff
+* Tradeoff
 
 - No false positives (only report real races)
 
@@ -235,7 +235,7 @@ Boils down to, Tsan have to do two things for every memory access
 - _Happens_ _before_ relation
 - How vector clocks are used to implement _happens_ _before_
 - How Go compiler and runtime adds extra instructions to detect data race
-- Whats the tradeoff.
+- Tradeoff.
 
 So how does go race detector works?
 
